@@ -1,48 +1,60 @@
+# hexapod/kinematics.py
+
 import numpy as np
 import math
+# from config import L1_COXA, L2_FEMUR, L3_TIBIA
 
-def inverse_kinematics(self, xyz_coords):
-    # xyz_coords é um array NumPy: [x, y, z]
-    y_linha = np.linalg.norm([xyz_coords[0], xyz_coords[1]]) - self.L1
-    L = np.linalg.norm([xyz_coords[2], y_linha])
 
-    # math.acos, math.atan2, etc.
-    alpha = math.acos(np.clip((self.L2**2 + self.L3**2 - L**2) / (2 * self.L2 * self.L3), -1.0, 1.0))
-    beta = math.acos(np.clip((L**2 + self.L2**2 - self.L3**2) / (2 * self.L2 * L), -1.0, 1.0))
+L1_COXA = 5.28
+L2_FEMUR = 10.4
+L3_TIBIA = 14.62
 
-    angles_rad_tibia = -math.pi + alpha
-    angles_rad_femur = math.atan2(xyz_coords[2], y_linha) + beta
-    angles_rad_ombro = math.atan2(xyz_coords[1], xyz_coords[0])
-    return np.array([angles_rad_ombro, angles_rad_femur, angles_rad_tibia])
 
-def forward_kinematics(self, angles_rad, L1, L2, L3):
+def forward_kinematics(angles_rad):
+    coxa_angle, femur_angle, tibia_angle = angles_rad
 
-    ''' Calculate the XYZ position of the foot tip given the joint angles in radians. 
-        returns a NumPy array [x, y, z].
-    '''
-    theta1, theta2, theta3 = angles_rad # ombro, femur, tibia
-
-    x = -np.sin(theta1) * (L1 + L3 * np.cos(theta2 + theta3) + L2 * np.cos(theta2))
-    y = np.cos(theta1) * (L1 + L3 * np.cos(theta2 + theta3) + L2 * np.cos(theta2))
-    z = L3 * np.sin(theta2 + theta3) + L2 * np.sin(theta2)
-
+    # xyz.x = -sin(angles_rad.ombro)*(this->L1 + this->L3*cos(angles_rad.femur + angles_rad.tibia) + this->L2*cos(angles_rad.femur));
+																																																																										 
+    # xyz.y = cos(angles_rad.ombro)*(this->L1 + this->L3*cos(angles_rad.femur + angles_rad.tibia) +this->L2*cos(angles_rad.femur));
+    # xyz.z = this->L3*sin(angles_rad.femur + angles_rad.tibia) + this->L2*sin(angles_rad.femur);
+    
+    x = -math.sin(coxa_angle) * (L1_COXA + L3_TIBIA * math.cos(femur_angle + tibia_angle) + L2_FEMUR * math.cos(femur_angle))
+    y = math.cos(coxa_angle) * (L1_COXA + L3_TIBIA * math.cos(femur_angle + tibia_angle) + L2_FEMUR * math.cos(femur_angle))
+    z = L3_TIBIA * math.sin(femur_angle + tibia_angle) + L2_FEMUR * math.sin(femur_angle)
+    
     return np.array([x, y, z])
 
-def trajectory_linear(self, xyz_ini, k, offset, angle_rad, P0, P1, P2, P3):
-    xyz = np.zeros(3)
-    kn = (k + offset) % TOTAL_PONTOS
-    if kn < METADE_PONTOS:
-        t = float(kn) / (METADE_PONTOS - 1)
-        u = 1 - t
-        bezier_x = u**3 * P0[0] + 3 * u**2 * t * P1[0] + 3 * u * t**2 * P2[0] + t**3 * P3[0]
-        bezier_y = u**3 * P0[1] + 3 * u**2 * t * P1[1] + 3 * u * t**2 * P2[1] + t**3 * P3[1]
-        xyz[0] = xyz_ini[0] + np.cos(angle_rad) * (-xyz_ini[0] + bezier_x)
-        xyz[1] = xyz_ini[1] + np.sin(angle_rad) * (-xyz_ini[1] + bezier_x)
-        xyz[2] = bezier_y
-        return xyz
+def inverse_kinematics(target_pos):
+    x, y, z = target_pos
     
-    xyz[0] = xyz_ini[0] + np.cos(angle_rad) * (-xyz_ini[0] + P3[0] + (P0[0] - P3[0]) * (float(kn - METADE_PONTOS) / (METADE_PONTOS - 1)))
-    xyz[1] = xyz_ini[1] + np.sin(angle_rad) * (-xyz_ini[1] + P3[0] + (P0[0] - P3[0]) * (float(kn - METADE_PONTOS) / (METADE_PONTOS - 1)))
-    xyz[2] = xyz_ini[2]
+    y_linha = math.sqrt(x**2 + y**2) - L1_COXA
+    L = math.sqrt(z**2 + y_linha**2)
     
-    return xyz
+    alpha = math.acos(np.clip((L2_FEMUR**2 + L3_TIBIA**2 - L**2) / (2 * L2_FEMUR * L3_TIBIA), -1.0, 1.0))
+    beta = math.acos(np.clip((L**2 + L2_FEMUR**2 - L3_TIBIA**2) / (2 * L * L2_FEMUR), -1.0, 1.0))
+    
+    tibia_angle_rad = -math.pi + alpha
+    coxa_angle_rad = -math.atan2(x, y)
+    femur_angle_rad = beta + math.atan2(z, y_linha)
+
+    return np.array([coxa_angle_rad, femur_angle_rad, tibia_angle_rad])
+
+def get_rotation_matrix(roll, pitch, yaw):
+    roll_rad, pitch_rad, yaw_rad = math.radians(roll), math.radians(pitch), math.radians(yaw)
+
+    Rz = np.array([[math.cos(yaw_rad),-math.sin(yaw_rad), 0], [math.sin(yaw_rad), math.cos(yaw_rad), 0], [0, 0, 1]])
+    Ry = np.array([[math.cos(pitch_rad), 0, math.sin(pitch_rad)], [0, 1, 0], [-math.sin(pitch_rad), 0, math.cos(pitch_rad)]])
+    Rx = np.array([[1, 0, 0], [0, math.cos(roll_rad), -math.sin(roll_rad)], [0, math.sin(roll_rad), math.cos(roll_rad)]])
+
+    return Rz @ Ry @ Rx
+
+
+# example usage:
+angles = np.radians([-30, -45, -90])  # coxia, femur, tibia in degrees
+foot_pos = forward_kinematics(angles)
+print("Foot Position:", foot_pos)
+target_pos = np.array([-10.0, 15.0, -5.0])  # x, y, z
+angles_rad = inverse_kinematics(target_pos)
+print("Joint Angles (radians):", angles_rad)
+print("Joint Angles (degrees):", np.degrees(angles_rad))
+
