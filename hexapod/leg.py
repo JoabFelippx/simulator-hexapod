@@ -13,6 +13,45 @@ class Leg:
         # A cinemática inversa da versão antiga calcula a posição da ponta do pé em relação ao ombro
         self.home_foot_tip_pos_relative = kinematics.forward_kinematics(self.current_angles_rad)
         self.current_foot_tip_pos_relative = self.home_foot_tip_pos_relative.copy()
+        
+        
+
+        
+        """
+
+            Pontos de controle da curva de Bezier para o movimento da pata
+            p0: posição inicial (início do passo)
+            p1: ponto de controle 1 (influencia a curvatura)
+            p2: ponto de controle 2 (influencia a curvatura)
+            p3: posição final (fim do passo)
+ 
+        """
+        self.p0 = np.array([0.0, 0.0]) # [x, z]
+        self.p1 = np.array([0.0, 0.0]) # [x, z]
+        self.p2 = np.array([0.0, 0.0]) # [x, z]
+        self.p3 = np.array([0.0, 0.0]) # [x, z]
+        self.update_bezier_points(config.WALK_STEP_LENGTH, config.WALK_STEP_HEIGHT)
+        
+    def update_bezier_points(self, step_length, step_height):
+        
+        
+        home_x, home_z = self.home_foot_tip_pos_relative[0], self.home_foot_tip_pos_relative[2] # Posição "em pé" da pata (no eixo x e z)
+        
+        
+        half_length = step_length / 2.0
+        
+        # P0: Ponto inicial do passo (totalmente para trás)
+        self.p0 = np.array([home_x - half_length, home_z])
+        # P3: Ponto final do passo (totalmente para frente)
+        self.p3 = np.array([home_x + half_length, home_z]) 
+        
+        
+        # P1 e P2: Pontos de controle para definir a curvatura do passo
+        # Usando um deslocamento no eixo x e a altura do passo no eixo z
+        control_x_offset = half_length * 0.5
+        self.p1 = np.array([home_x - control_x_offset, home_z + step_height])
+        self.p2 = np.array([home_x + control_x_offset, home_z + step_height])
+       
 
     def set_foot_tip_position(self, target_pos_relative_to_shoulder): # Atualiza a posição da ponta do pé e os ângulos das juntas
         self.current_foot_tip_pos_relative = target_pos_relative_to_shoulder
