@@ -6,6 +6,15 @@ from hexapod.leg import Leg
 from hexapod import kinematics
 import config
 
+def _cubic_bezier(p0, p1, p2, p3, t):
+    """
+    Calcula um ponto em uma curva de Bézier cúbica.
+    t é o tempo/fase, variando de 0.0 a 1.0.
+    """
+    u = 1 - t
+    return (u**3 * p0) + (3 * u**2 * t * p1) + (3 * u * t**2 * p2) + (t**3 * p3)
+
+
 class Hexapod:
     def __init__(self):
         self.legs = {}
@@ -17,39 +26,78 @@ class Hexapod:
             
         self.body_translation = np.array([0.0, 0.0, 0.0])
         self.body_rotation = np.array([0.0, 0.0, 0.0]) # Roll, Pitch, Yaw
+        self.body_rotation_matrix = np.identity(3)
 
     def walk(self, step_phase, direction_angle_rad):
         for leg in self.legs.values():
-            phase = (step_phase + config.GAIT_OFFSETS[leg.name]) % 1.0
-            new_foot_pos = leg.home_foot_tip_pos_relative.copy()
             
-            if 0 <= phase < 0.5:
-                phase_normalized = phase / 0.5
-                new_foot_pos[2] -= config.WALK_STEP_HEIGHT * math.sin(phase_normalized * math.pi)
-                delta_x = (1 - phase_normalized * 2) * config.WALK_STEP_LENGTH / 2
-            else:
-                phase_normalized = (phase - 0.5) / 0.5
-                delta_x = (phase_normalized * 2 - 1) * config.WALK_STEP_LENGTH / 2
-
-            rot_z = np.array([
+            phase_offset = (step_phase + config.GAIT_OFFSETS[leg.name]) % 1.0      
+            
+            home_pos = leg.home_foot_tip_pos_relative.copy() # Posição "em pé" da pata
+            
+            if 0 <= phase_offset < 0.5: # Fase de apoio (pé no chão)
+                # Move a pata para trás ao longo do eixo x local
+                t = phase_offset * 2.0
+                
+                xz_point = _cubic_bezier(leg.p0, leg.p1, leg.p2, leg.p3, t)
+                
+                final_x_local = xz_point[0]
+                final_z_local = xz_point[1]
+            else: # Fase de pé no ar
+                t = (phase_offset - 0.5) * 2.0
+                
+                xz_point = leg.p3 * (1 - t) + leg.p0 * t
+                
+                final_x_local = xz_point[0]
+                final_z_local = xz_point[1]
+                
+            # Agora, aplicamos a direção do movimento (omnidirecional)
+            # O deslocamento horizontal é a diferença entre a posição X atual e a de repouso.
+            horizontal_displacement = final_x_local - home_pos[0]
+            
+            # Cria a matriz de rotação 2D
+            rot_matrix = np.array([
                 [math.cos(direction_angle_rad), -math.sin(direction_angle_rad)],
                 [math.sin(direction_angle_rad), math.cos(direction_angle_rad)]
             ])
-            rotated_delta = rot_z @ np.array([delta_x, 0])
             
-            new_foot_pos[0] += rotated_delta[0]
-            new_foot_pos[1] += rotated_delta[1]
+            # O vetor base do deslocamento é para "frente" no frame da perna (eixo X)
+            base_vector = np.array([horizontal_displacement, 0])
+            # Rotaciona o vetor para a direção desejada
+            rotated_delta = rot_matrix @ base_vector
+
+            # Monta a nova posição final da pata
+            new_foot_pos = np.array([
+                home_pos[0] + rotated_delta[0], # Posição X rotacionada
+                home_pos[1] + rotated_delta[1], # Posição Y rotacionada
+                final_z_local                   # Posição Z da trajetória (altura)
+            ])
             
             leg.set_foot_tip_position(new_foot_pos)
 
     def rotate_body(self, roll, pitch, yaw):
-        rotation_matrix = kinematics.get_rotation_matrix(roll, pitch, yaw)
+        
+        self.body_rotation = np.array([roll, pitch, yaw])
+        self.body_rotation_matrix = kinematics.get_rotation_matrix(roll, pitch, yaw)
+  
         for leg in self.legs.values():
-            foot_pos_body_frame = leg.shoulder_position + leg.home_foot_tip_pos
-            rotated_foot_pos = rotation_matrix @ foot_pos_body_frame
-            new_foot_pos_relative_to_shoulder = rotated_foot_pos - leg.shoulder_position
-            leg.set_foot_tip_position(new_foot_pos_relative_to_shoulder)
+        
+            foot_tip_target_in_world_frame = leg.shoulder_position + leg.home_foot_tip_pos_relative
+            
+            rotated_shoulder_pos = self.body_rotation_matrix @ leg.shoulder_position
+        
+            new_foot_pos_relative_to_rotated_shoulder = foot_tip_target_in_world_frame - rotated_shoulder_pos
+        
+            inv_rotation_matrix = self.body_rotation_matrix.T
+            new_foot_pos_in_leg_frame = inv_rotation_matrix @ new_foot_pos_relative_to_rotated_shoulder
+        
+            leg.set_foot_tip_position(new_foot_pos_in_leg_frame)
+
 
     def stop(self):
         for leg in self.legs.values():
             leg.set_foot_tip_position(leg.home_foot_tip_pos_relative)
+            
+    def reset_body_orientation(self):
+        if np.any(self.body_rotation):
+            self.rotate_body(0, 0, 0)
