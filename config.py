@@ -9,15 +9,24 @@ WINDOW_TITLE = "Simulador de Robô Hexapod"
 FPS = 60
 
 # --- Cores no estilo "Sci-Fi" ---
-COLOR_BACKGROUND = (34, 47, 62)
+COLOR_BACKGROUND = (0,106,128)
 COLOR_GRID = (10, 61, 98, 150)
-COLOR_ROBOT_BODY_OUTLINE = (252, 66, 123)
-COLOR_ROBOT_BODY_FILL = (255, 99, 72, 77)
-COLOR_LEGS = (238, 90, 36)
-COLOR_CENTER_SPHERE = (50, 255, 126)
-COLOR_HEAD = (252, 66, 123)
+COLOR_ROBOT_BODY_OUTLINE = (255, 36, 0)   
+COLOR_ROBOT_BODY_FILL = (255, 36, 0, 70)  
+COLOR_LEGS = (40, 40, 40)               
+COLOR_CENTER_SPHERE = (200, 200, 200)   
+COLOR_HEAD = (255, 36, 0)
 COLOR_HUD_TEXT = (46, 204, 113)
 COLOR_HUD_ACCENT = (252, 66, 123)
+
+COLOR_SUPPORT_PLANE = (50, 255, 126, 60) # Verde semi-transparente
+COLOR_SUPPORT_PLANE_OUTLINE = (50, 255, 126, 200) # Contorno do mesmo verde
+
+
+FEMUR_SHIELD_WIDTH = 4.0
+TIBIA_SHIELD_WIDTH = 3.5
+
+SHIELD_COLOR = (255, 36, 0)
 
 # --- Dimensões do Robô (em cm) ---
 L1_COXA = 5.28
@@ -57,7 +66,7 @@ INITIAL_ANGLES_DEG = {
     "DirM": np.array([180, 26, -100]),
     "DirT": np.array([135, 26, -100]),
     
-    # Pernas da ESQUERDA (com o ângulo do ombro invertido para simetria)
+    # Pernas da ESQUERDA
     "EsqF": np.array([-45, 26, -100]),
     "EsqM": np.array([0, 26, -100]),
     "EsqT": np.array([45, 26, -100]),
@@ -65,7 +74,7 @@ INITIAL_ANGLES_DEG = {
 }
 
 # --- Parâmetros de Movimento ---
-WALK_STEP_LENGTH = 8.0
+WALK_STEP_LENGTH = 16
 WALK_STEP_HEIGHT = 6.0
 MOVEMENT_SPEED = 1
 BODY_ROTATION_MAX_ANGLE_DEG = 15
