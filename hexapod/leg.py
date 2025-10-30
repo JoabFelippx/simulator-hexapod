@@ -51,11 +51,14 @@ class Leg:
         control_x_offset = half_length * 0.5
         self.p1 = np.array([home_x - control_x_offset, home_z + step_height])
         self.p2 = np.array([home_x + control_x_offset, home_z + step_height])
-       
 
     def set_foot_tip_position(self, target_pos_relative_to_shoulder): # Atualiza a posição da ponta do pé e os ângulos das juntas
         self.current_foot_tip_pos_relative = target_pos_relative_to_shoulder
         self.current_angles_rad = kinematics.inverse_kinematics(self.current_foot_tip_pos_relative)
+
+    def set_current_angles(self, angles):
+        self.current_angles_rad = np.radians(angles)
+        self.set_foot_tip_position(self.current_angles_rad)
 
     def get_all_joint_positions(self):
         """
