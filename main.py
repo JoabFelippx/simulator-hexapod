@@ -45,9 +45,9 @@ def main():
             current_mode = "Rotacionando Corpo"
         
         if not is_moving:
-            scarlet.stop()
-            scarlet.reset_body_orientation()
-            step_phase = 0.0
+            scarlet.ohyes()
+            # scarlet.reset_body_orientation()
+            # step_phase = 0.0
             
         screen.fill(config.COLOR_BACKGROUND)
         renderer.draw_grid()
