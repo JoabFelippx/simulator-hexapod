@@ -5,6 +5,7 @@ import math
 from hexapod.leg import Leg
 from hexapod import kinematics
 import config
+from get_angles import reading
 
 def _cubic_bezier(p0, p1, p2, p3, t):
     """
@@ -22,7 +23,7 @@ class Hexapod:
             # Usa o nome completo da perna (ex: "EsqF") para pegar os ângulos corretos
             initial_angles = config.INITIAL_ANGLES_DEG[name]
             self.legs[name] = Leg(name, shoulder_pos, initial_angles)
-            
+        # print(self.legs)
             
         self.body_translation = np.array([0.0, 0.0, 0.0])
         self.body_rotation = np.array([0.0, 0.0, 0.0]) # Roll, Pitch, Yaw
@@ -98,6 +99,23 @@ class Hexapod:
         for leg in self.legs.values():
             leg.set_foot_tip_position(leg.home_foot_tip_pos_relative)
             
+    def ohyes(self):
+        angles = reading()
+
+        if angles is None:
+            return None
+      
+        angles_rad = np.radians(angles)
+        for k, leg  in enumerate(self.legs.values()):
+            
+            
+
+            xyz = kinematics.forward_kinematics(angles_rad[k])
+
+            # print(leg.name, angles[k])
+
+            leg.set_foot_tip_position(xyz)
+
     def reset_body_orientation(self):
         if np.any(self.body_rotation):
             self.rotate_body(0, 0, 0)
