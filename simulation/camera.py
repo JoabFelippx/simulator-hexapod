@@ -5,7 +5,7 @@ import numpy as np
 import math
 
 class Camera:
-    # ... (código do __init__, _create_projection_matrix, update_view_matrix, handle_event permanece igual) ...
+   
     def __init__(self, width, height, initial_distance=30): # Zoom inicial ajustado
         self.width = width
         self.height = height
@@ -41,7 +41,7 @@ class Camera:
 
 
     def project(self, point_3d):
-        # ❗ MUDANÇA AQUI: Usa índices [0], [1], [2] para numpy arrays
+        
         p_homo = np.array([point_3d[0], point_3d[1], point_3d[2], 1.0])
         p_clip = self.projection_matrix @ self.view_matrix @ p_homo
         if p_clip[3] != 0: p_ndc = p_clip / p_clip[3]
