@@ -6,7 +6,7 @@ import numpy as np
 SCREEN_WIDTH = 1200
 SCREEN_HEIGHT = 800
 WINDOW_TITLE = "Simulador de Robô Hexapod"
-FPS = 60
+FPS = 500
 
 # --- Cores no estilo "Sci-Fi" ---
 COLOR_BACKGROUND = (0,106,128)
