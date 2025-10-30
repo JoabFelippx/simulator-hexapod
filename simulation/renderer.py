@@ -44,7 +44,7 @@ class Renderer:
         Desenha um polígono conectando as pontas das patas que estão no chão.
         """
         foot_tip_points_3d = []
-        ground_z_level = -9.49
+        ground_z_level = -9.65
     
         ordered_leg_names = ["EsqF", "DirF", "DirM", "DirT", "EsqT", "EsqM"]
         
@@ -56,6 +56,8 @@ class Renderer:
             
             foot_tip_world = rotation_matrix @ foot_tip_local
         
+            # print(foot_tip_world)
+
             if math.isclose(foot_tip_world[2], ground_z_level, abs_tol=0.01): # Verifica se a pata está no chão usando isclose
                 foot_tip_points_3d.append(foot_tip_world)
                
